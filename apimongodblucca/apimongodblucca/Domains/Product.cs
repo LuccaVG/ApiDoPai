@@ -13,7 +13,7 @@ namespace apimongodblucca.Domains
         public string? Name { get; set; }
 
         [BsonElement("preco")]
-        public decimal Price { get; set; }
+        public decimal? Price { get; set; }
 
         public Dictionary<string,string>? AdditionalAtributes { get; set; }
 

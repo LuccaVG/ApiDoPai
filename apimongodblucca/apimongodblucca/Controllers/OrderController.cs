@@ -14,12 +14,14 @@ namespace apimongodblucca.Controllers
     {
         private readonly IMongoCollection<Order> _order;
         private readonly IMongoCollection<Client> _client;
+        private readonly IMongoCollection<Product> _product;
         private readonly IMongoCollection<User> _user;
 
         public OrderController(MongoDbService mongoDbService)
         {
             _order = mongoDbService.GetDatabase.GetCollection<Order>("Pedidos");
             _client = mongoDbService.GetDatabase.GetCollection<Client>("Clientes");
+            _product = mongoDbService.GetDatabase.GetCollection<Product>("Produtos");
             _user = mongoDbService.GetDatabase.GetCollection<User>("Usuarios");
         }
 
@@ -29,6 +31,21 @@ namespace apimongodblucca.Controllers
             try
             {
                 var orders = await _order.Find(FilterDefinition<Order>.Empty).ToListAsync();
+
+                foreach (var order in orders)
+                {
+                    if (order.ProductId != null)
+                    {
+                        var filter = Builders<Product>.Filter.In(p => p.Id, order.ProductId);
+
+                        order.Products = await _product.Find(filter).ToListAsync();
+                    }
+
+                    if (order.ClientId != null)
+                    {
+                        order.Client = await _client.Find(x => x.Id == order.ClientId).FirstOrDefaultAsync();
+                    }
+                }
 
                 return Ok(orders);
             }
@@ -75,11 +92,36 @@ namespace apimongodblucca.Controllers
         {
             try
             {
-                var order = await _order.Find(x => x.Id == id).FirstOrDefaultAsync();
+                //var order = await _order.Find(x => x.Id == id).FirstOrDefaultAsync();
                 //var filter = Builders<order>.Filter.Eq(x => x.Id, id);
+                try
+                {
+                    var orders = await _order.Find(x => x.Id == id).ToListAsync();
 
-                return Ok(order);
-                //return Ok(filter);
+                    foreach (var order in orders)
+                    {
+                        if (order.ProductId != null)
+                        {
+                            var filter = Builders<Product>.Filter.In(p => p.Id, order.ProductId);
+
+                            order.Products = await _product.Find(filter).ToListAsync();
+                        }
+
+                        if (order.ClientId != null)
+                        {
+                            order.Client = await _client.Find(x => x.Id == order.ClientId).FirstOrDefaultAsync();
+                        }
+                    }
+
+                    return Ok(orders);
+                }
+                catch (Exception e)
+                {
+                    return BadRequest(e.Message);
+                }
+
+                //return Ok(order);
+                //return Ok(filter);    
             }
             catch (Exception e)
             {
